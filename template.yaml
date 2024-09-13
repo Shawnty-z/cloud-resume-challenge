@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  cloud-resume-challenge
+  
+  Sample SAM Template for cloud-resume-challenge
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+
+Resources:
+
+  MyWebsite:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      BucketName: caleb-zeng-web
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: cloud-resume-challenge
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "ID"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "ID"
+          KeyType: "HASH"
+
+  MyRoute53Record:
+    Type: "AWS::Route53::RecordSetGroup"
+    Properties:
+      HostedZoneId: Z00994307MFCNUAQ9KQ1
+      RecordSets:
+        - Name: www.calebzeng.com
+          Type: A
+          AliasTarget:
+            HostedZoneId: Z2FDTNDATAQYW2  # CloudFront hosted zone ID
+            DNSName: !GetAtt MyDistribution.DomainName
+
+  MyCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: www.calebzeng.com
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: www.calebzeng.com
+          HostedZoneId: Z00994307MFCNUAQ9KQ1  # Automatically creates the DNS validation record in Route 53
+
+  MyDistribution:
+    Type: "AWS::CloudFront::Distribution"
+    Properties:
+      DistributionConfig:
+        ViewerCertificate:
+          AcmCertificateArn: "arn:aws:acm:us-east-1:010928227939:certificate/eb9b92c7-ad4a-4668-a530-6202b74dd30f"
+          SslSupportMethod: sni-only
+        Aliases:
+          - www.calebzeng.com
+        DefaultCacheBehavior:
+          ViewerProtocolPolicy: redirect-to-https
+          TargetOriginId: S3-caleb-zeng-web
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
+          ForwardedValues:
+            QueryString: false
+        Origins:
+          - DomainName: caleb-zeng-web.s3-website.eu-west-2.amazonaws.com
+            Id: S3-caleb-zeng-web
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only  # CloudFront will interact with S3 over HTTP
+        Enabled: true
+        DefaultRootObject: index.html
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref MyWebsite
+                - /*
+      Bucket: !Ref MyWebsite
+
+  ViewsCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: views-count/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /views
+            Method: GET
+      Environment:
+        Variables:
+          TABLE_NAME: cloud-resume-challenge
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: cloud-resume-challenge
