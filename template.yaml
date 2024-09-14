@@ -5,7 +5,6 @@ Description: >
   
   Sample SAM Template for cloud-resume-challenge
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 5
@@ -20,10 +19,56 @@ Resources:
         IndexDocument: index.html
       BucketName: caleb-zeng-web
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MyWebsite
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontAccess
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${MyWebsite}/*"
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "Access to S3 caleb-zeng-web only through CloudFront"
+
+  MyDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        ViewerCertificate:
+          AcmCertificateArn: "arn:aws:acm:us-east-1:010928227939:certificate/eb9b92c7-ad4a-4668-a530-6202b74dd30f"
+          SslSupportMethod: sni-only
+        Aliases:
+          - www.calebzeng.com
+        DefaultCacheBehavior:
+          ViewerProtocolPolicy: redirect-to-https
+          TargetOriginId: S3-caleb-zeng-web
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
+          ForwardedValues:
+            QueryString: false
+        Origins:
+          - DomainName: !GetAtt MyWebsite.DomainName
+            Id: S3-caleb-zeng-web
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+
+        Enabled: true
+        DefaultRootObject: index.html
 
   DynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -57,49 +102,6 @@ Resources:
         - DomainName: www.calebzeng.com
           HostedZoneId: Z00994307MFCNUAQ9KQ1  # Automatically creates the DNS validation record in Route 53
 
-  MyDistribution:
-    Type: "AWS::CloudFront::Distribution"
-    Properties:
-      DistributionConfig:
-        ViewerCertificate:
-          AcmCertificateArn: "arn:aws:acm:us-east-1:010928227939:certificate/eb9b92c7-ad4a-4668-a530-6202b74dd30f"
-          SslSupportMethod: sni-only
-        Aliases:
-          - www.calebzeng.com
-        DefaultCacheBehavior:
-          ViewerProtocolPolicy: redirect-to-https
-          TargetOriginId: S3-caleb-zeng-web
-          DefaultTTL: 0
-          MinTTL: 0
-          MaxTTL: 0
-          ForwardedValues:
-            QueryString: false
-        Origins:
-          - DomainName: caleb-zeng-web.s3-website.eu-west-2.amazonaws.com
-            Id: S3-caleb-zeng-web
-            CustomOriginConfig:
-              OriginProtocolPolicy: http-only  # CloudFront will interact with S3 over HTTP
-        Enabled: true
-        DefaultRootObject: index.html
-
-  BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      PolicyDocument:
-        Id: MyPolicy
-        Version: 2012-10-17
-        Statement:
-          - Sid: PublicReadForGetBucketObjects
-            Effect: Allow
-            Principal: "*"
-            Action: "s3:GetObject"
-            Resource: !Join
-              - ""
-              - - "arn:aws:s3:::"
-                - !Ref MyWebsite
-                - /*
-      Bucket: !Ref MyWebsite
-
   ViewsCountFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -120,3 +122,4 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: cloud-resume-challenge
+
