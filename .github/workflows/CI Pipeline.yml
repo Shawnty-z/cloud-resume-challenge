@@ -1,4 +1,7 @@
-name: Python Unit Tests
+name: CI Pipeline
+
+env:
+  PYTHON_VERSION: '3.9'
 
 on:
   push:
@@ -12,26 +15,23 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: [3.9, 3.10, 3.11]
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install boto3  # Install any other dependencies
-        pip install -r requirements.txt || true  # If you have a requirements.txt
+        pip install boto3
+        pip install -r requirements.txt || true
 
     - name: Run unit tests
       run: |
         python -m unittest discover -s . -p '*_test.py'
+
 
