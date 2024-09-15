@@ -1675,6 +1675,7 @@ p {
 .hero-heading {
   border-radius: 0;
   max-width: 640px;
+  font-family: Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;
   font-size: 100px;
   line-height: 100px;
   position: relative;
@@ -2605,6 +2606,7 @@ p {
   .hero-heading {
     max-width: 720px;
     margin-bottom: 32px;
+    font-family: Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;
     position: static;
   }
 
@@ -2635,7 +2637,11 @@ p {
   }
 
   .contact-button-footer {
-    font-size: 20px;
+    font-size: 16px;
+  }
+
+  .paragraph {
+    font-size: 17px;
   }
 
   .expertise__item.wait {
@@ -2783,6 +2789,10 @@ p {
     top: 70px;
     left: 27%;
     right: -10%;
+  }
+
+  .paragraph-3, .paragraph-4 {
+    font-size: 17px;
   }
 }
 
@@ -3277,6 +3287,7 @@ p {
   .navbar2_menu-button {
     padding: 0;
     display: block;
+    position: relative;
   }
 
   .navbar2_menu-button.w--open {
@@ -3365,6 +3376,7 @@ p {
     padding-bottom: 0;
     padding-right: 0;
     display: flex;
+    position: static;
   }
 
   .spline-scene-3 {
